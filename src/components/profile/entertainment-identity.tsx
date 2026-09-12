@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RegenerateInsight } from "@/components/profile/regenerate-insight";
 import type { IdentityResult } from "@/lib/taste/identity-types";
 import { isTakingShape } from "@/lib/taste/identity-types";
 import { TasteSpectrums } from "@/components/profile/taste-spectrums";
@@ -72,7 +73,7 @@ export function EntertainmentIdentity({ identity, reveal = false }: Entertainmen
     );
   }
 
-  const { archetype, confidence, evidence, spectrums, traits } = identity;
+  const { archetype, confidence, evidence, spectrums, traits, narrative } = identity;
 
   return (
     <section className="space-y-8">
@@ -96,7 +97,13 @@ export function EntertainmentIdentity({ identity, reveal = false }: Entertainmen
         </h1>
 
         <div className={cn("space-y-4 transition-opacity duration-700", step >= 3 ? "opacity-100" : "opacity-0")}>
-          <p className="max-w-2xl text-body-lg text-muted-foreground">{archetype.summary}</p>
+          <p className="max-w-2xl text-body-lg text-muted-foreground">{narrative.description}</p>
+
+          {narrative.emergingTraits.length > 0 && (
+            <p className="text-body-sm text-muted-foreground">
+              Just starting to show up: {narrative.emergingTraits.join(", ")}.
+            </p>
+          )}
 
           {traits.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
@@ -112,6 +119,17 @@ export function EntertainmentIdentity({ identity, reveal = false }: Entertainmen
             </div>
           )}
         </div>
+      </div>
+
+      {/* Says plainly where the wording came from. An interpretation shown as
+          measurement is a lie even when the numbers behind it are real (§30). */}
+      <div className={cn("flex flex-wrap items-center gap-3 transition-opacity duration-700", step >= 3 ? "opacity-100" : "opacity-0")}>
+        <p className="text-caption text-muted-foreground">
+          {narrative.aiGenerated
+            ? "Aurora's interpretation of your taste, generated from your activity."
+            : "Generated from your Aurora activity."}
+        </p>
+        {narrative.aiGenerated && <RegenerateInsight kind="IDENTITY" label="Not quite right? Regenerate" />}
       </div>
 
       {evidence.length > 0 && (

@@ -19,6 +19,7 @@ import { getRatingsDistribution } from "@/lib/taste/ratings-distribution";
 import { getMilestones } from "@/lib/taste/milestones";
 import { getRecentDiscoveries } from "@/lib/taste/discoveries";
 import { getCollectionCovers, getPlaylistCovers } from "@/lib/taste/covers";
+import { listMoodWatchlists } from "@/lib/mood/store";
 import { getRecommendationsForUser } from "@/lib/recommendations";
 import { CONTENT_KIND_FROM_TYPE } from "@/types/content";
 import { ProfileHeader } from "@/components/profile/profile-header";
@@ -44,6 +45,7 @@ import { CollectionsPreview } from "@/components/profile/collections-preview";
 import { PlaylistsPreview } from "@/components/profile/playlists-preview";
 import { JournalSection } from "@/components/profile/journal-section";
 import { NextDiscoveries } from "@/components/profile/next-discoveries";
+import { MoodWatchlistsSection } from "@/components/mood/mood-watchlists-section";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -103,10 +105,37 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   );
 }
 
+/**
+ * Identity and its share card, behind their own Suspense boundary.
+ *
+ * Generating the identity copy can involve a model call, and the rest of the
+ * Overview is instant — so this streams separately rather than holding the
+ * whole tab on an AI round-trip (§27).
+ */
+async function IdentityBlock({ userId, stats }: { userId: string; stats: Awaited<ReturnType<typeof getTasteStats>> }) {
+  const identity = await getEntertainmentIdentity(userId);
+  return (
+    <>
+      <EntertainmentIdentity identity={identity} reveal />
+      <IdentityCard identity={identity} stats={stats} />
+    </>
+  );
+}
+
+function IdentitySkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden>
+      <div className="h-3 w-28 animate-pulse rounded bg-muted" />
+      <div className="h-10 w-72 max-w-full animate-pulse rounded bg-muted" />
+      <div className="h-4 w-full max-w-xl animate-pulse rounded bg-muted" />
+      <div className="h-4 w-2/3 max-w-md animate-pulse rounded bg-muted" />
+    </div>
+  );
+}
+
 /** Overview — the emotional entry point. Identity first, then just enough to invite exploration. */
 async function OverviewTab({ userId }: { userId: string }) {
-  const [identity, stats, insights, recentDiscoveries] = await Promise.all([
-    getEntertainmentIdentity(userId),
+  const [stats, insights, recentDiscoveries] = await Promise.all([
     getTasteStats(userId),
     getTasteInsights(userId),
     getRecentDiscoveries(userId),
@@ -114,7 +143,9 @@ async function OverviewTab({ userId }: { userId: string }) {
 
   return (
     <div className="flex flex-col gap-12">
-      <EntertainmentIdentity identity={identity} reveal />
+      <Suspense fallback={<IdentitySkeleton />}>
+        <IdentityBlock userId={userId} stats={stats} />
+      </Suspense>
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_280px] lg:items-start lg:gap-8">
         <div className="flex flex-col gap-10">
@@ -124,7 +155,6 @@ async function OverviewTab({ userId }: { userId: string }) {
         <div className="flex flex-col gap-6">
           <TasteStatsSection stats={stats} />
           <ContentDistribution stats={stats} />
-          <IdentityCard identity={identity} stats={stats} />
         </div>
       </div>
     </div>
@@ -206,7 +236,8 @@ async function ActivityTab({
 }
 
 async function CollectionsTab({ userId }: { userId: string }) {
-  const [collectionsList, playlistsList] = await Promise.all([
+  const [moodWatchlists, collectionsList, playlistsList] = await Promise.all([
+    listMoodWatchlists(userId, 6),
     prisma.collection.findMany({
       where: { userId },
       orderBy: { updatedAt: "desc" },
@@ -228,6 +259,7 @@ async function CollectionsTab({ userId }: { userId: string }) {
 
   return (
     <div className="flex flex-col gap-12">
+      <MoodWatchlistsSection watchlists={moodWatchlists} />
       <CollectionsPreview
         collections={collectionsList.map((c) => ({
           id: c.id,

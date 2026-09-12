@@ -14,6 +14,7 @@ import { getBeyondYourUsual } from "@/lib/crossmedia/discovery";
 import { getOnePerfectPick } from "@/lib/recommendations/one-pick";
 import { TonightsPick } from "@/components/home/tonights-pick";
 import { TasteSummaryCard } from "@/components/home/taste-summary-card";
+import { MoodEntry } from "@/components/mood/mood-entry";
 import { getEntertainmentIdentity } from "@/lib/taste/identity";
 import { getTasteInsights } from "@/lib/taste/insights";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,11 @@ export default async function HomePage() {
 
       <div className="px-4 sm:px-8">
         <TasteSummaryCard identity={identity} insight={tasteInsights[0] ?? null} />
+      </div>
+
+      {/* A quiet doorway, sized as one row rather than a feature banner (§37). */}
+      <div className="px-4 sm:px-8">
+        <MoodEntry />
       </div>
 
       <div className="flex flex-col gap-12 sm:px-8">

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { slugifyGenre } from "@/lib/utils";
 import type { EntertainmentDNA, WeightedLabel } from "@/lib/taste/dna";
 import type { EntertainmentHabit } from "@/lib/taste/habits";
+import { RegenerateInsight } from "@/components/profile/regenerate-insight";
 
 interface EntertainmentDnaSectionProps {
   dna: EntertainmentDNA;
@@ -88,10 +89,34 @@ export function EntertainmentDnaSection({ dna, habits = [] }: EntertainmentDnaSe
 
   return (
     <section className="space-y-6">
-      <div>
-        <h2 className="text-h6 font-semibold">Entertainment DNA</h2>
-        <p className="text-body-sm text-muted-foreground">The stories and sounds that shape your taste.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-h6 font-semibold">Entertainment DNA</h2>
+          <p className="text-body-sm text-muted-foreground">The stories and sounds that shape your taste.</p>
+        </div>
+        {dna.narrative?.aiGenerated && <RegenerateInsight kind="DNA" />}
       </div>
+
+      {dna.narrative && (
+        <div className="space-y-2">
+          <p className="max-w-2xl text-body text-foreground">{dna.narrative.summary}</p>
+          {dna.aiTraits && dna.aiTraits.length > 0 && (
+            <ul className="space-y-1">
+              {dna.aiTraits.map((trait) => (
+                <li key={`${trait.dimension}-${trait.label}`} className="text-body-sm text-muted-foreground">
+                  <span className="text-caption uppercase tracking-wide text-muted-foreground/70">
+                    {trait.dimension}
+                  </span>{" "}
+                  <span className="font-medium text-foreground">{trait.label}</span> — {trait.evidence}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-caption text-muted-foreground">
+            Aurora&apos;s interpretation of your taste, generated from your activity.
+          </p>
+        </div>
+      )}
 
       {dna.yourTaste.length > 0 && <p className="text-h5 font-medium text-foreground">{dna.yourTaste.join(" · ")}</p>}
 

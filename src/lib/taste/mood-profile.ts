@@ -2,6 +2,8 @@ import "server-only";
 import { prisma } from "@/lib/db/prisma";
 import { buildTasteSignal, type TasteSignal } from "@/lib/recommendations/signals";
 import type { Confidence } from "@/lib/taste/dna";
+import { generateMoodProfileCopy } from "@/lib/taste/narrative-ai";
+import type { TasteNarrative } from "@/lib/taste/narrative-types";
 
 export interface MoodEntry {
   mood: string;
@@ -13,6 +15,8 @@ export interface MoodEntry {
 
 export interface MoodProfile {
   hasEnoughSignal: boolean;
+  /** AI summary of the moods below — null when unavailable (§28). */
+  narrative?: TasteNarrative | null;
   /** Strongest moods across the user's whole history. */
   mostEnjoyed: MoodEntry[];
   /** Moods that show up in the last 30 days but aren't already a top mood. */
@@ -41,7 +45,11 @@ function confidenceOf(weight: number): Confidence {
  * honestly say "you often enjoy" vs "you've been exploring" instead of
  * treating every mood the same way.
  */
-export async function getMoodProfile(userId: string, signal?: TasteSignal): Promise<MoodProfile> {
+export async function getMoodProfile(
+  userId: string,
+  signal?: TasteSignal,
+  options: { force?: boolean } = {}
+): Promise<MoodProfile> {
   const taste = signal ?? (await buildTasteSignal(userId));
   const preference = await prisma.userPreference.findUnique({ where: { userId } });
   const mutedMoods = preference?.mutedMoods ?? [];
@@ -109,11 +117,24 @@ export async function getMoodProfile(userId: string, signal?: TasteSignal): Prom
     .slice(0, 4)
     .map(([mood]) => mood);
 
-  return {
+  const profile: MoodProfile = {
     hasEnoughSignal: taste.hasSignal,
     mostEnjoyed,
     recentlyExplored,
     emerging,
     mutedMoods,
   };
+
+  // Moods here are properties of content, never a claim about how the user
+  // feels — copy that drifts into the latter is rejected rather than shown.
+  const copy = await generateMoodProfileCopy(userId, profile, options);
+  if (copy) {
+    profile.narrative = {
+      summary: copy.data.summary,
+      aiGenerated: true,
+      generatedAt: copy.generatedAt.toISOString(),
+    };
+  }
+
+  return profile;
 }

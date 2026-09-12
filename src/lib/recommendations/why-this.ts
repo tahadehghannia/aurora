@@ -1,10 +1,13 @@
 import "server-only";
 import type { TasteSignal } from "@/lib/recommendations/signals";
 import { buildRecommendationReasons, type CommunityContext, type RecommendationReason } from "@/lib/recommendations/reasons";
+import { explainRecommendation } from "@/lib/recommendations/explain-ai";
 import type { ContentCard } from "@/types/content";
 
 export interface WhyThis {
   headline: string | null;
+  /** True when the headline was worded by a model rather than templated (§30). */
+  headlineAiGenerated?: boolean;
   checklist: string[];
   /** Same checklist, structured — confidence/priority/discoveryHref for UI that wants more than plain text. */
   reasons: RecommendationReason[];
@@ -30,4 +33,28 @@ export function whyRecommended(card: ContentCard, signal: TasteSignal, community
     checklist: concrete.map((r) => r.text),
     reasons: concrete,
   };
+}
+
+/**
+ * The same explanation, with the headline reworded by a model when one is
+ * available (§10, §11).
+ *
+ * Aurora's structured reasons are computed first and passed in; the model only
+ * ever rewrites the top line. The checklist underneath stays exactly as Aurora
+ * generated it, so the evidence a user can expand and check is never
+ * model-written.
+ */
+export async function whyRecommendedWithAi(
+  card: ContentCard,
+  signal: TasteSignal,
+  userId: string,
+  community?: CommunityContext
+): Promise<WhyThis> {
+  const base = whyRecommended(card, signal, community);
+  if (!base.headline) return base;
+
+  const explanation = await explainRecommendation(card, base.reasons, userId);
+  if (!explanation) return base;
+
+  return { ...base, headline: explanation, headlineAiGenerated: true };
 }

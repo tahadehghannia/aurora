@@ -30,7 +30,16 @@ export function TasteSummaryCard({ identity, insight }: { identity: IdentityResu
       {identity.traits.length > 0 && (
         <p className="text-body-sm text-muted-foreground">{identity.traits.slice(0, 3).join(" · ")}</p>
       )}
-      {insight && <p className="max-w-xl text-body-sm text-muted-foreground">{insight}</p>}
+      {/* Prefer the shared identity model's own read of what's changing; fall
+          back to Aurora's deterministic insight. Home never computes a second,
+          competing taste model (§32). */}
+      {identity.narrative.emergingTraits.length > 0 ? (
+        <p className="max-w-xl text-body-sm text-muted-foreground">
+          Lately leaning {identity.narrative.emergingTraits.join(" and ")}.
+        </p>
+      ) : (
+        insight && <p className="max-w-xl text-body-sm text-muted-foreground">{insight}</p>
+      )}
       <span className="mt-0.5 inline-flex items-center gap-1 text-caption font-medium text-brand">
         Explore your DNA
         <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />

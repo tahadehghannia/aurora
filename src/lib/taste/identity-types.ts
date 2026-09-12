@@ -30,8 +30,26 @@ export interface IdentityEvidence {
   href?: string;
 }
 
+/**
+ * The prose around an identity, and where it came from.
+ *
+ * `aiGenerated` is not decoration: Aurora states plainly when a model wrote the
+ * wording, because an interpretation presented as measurement is a lie even
+ * when the underlying numbers are real (§30).
+ */
+export interface IdentityNarrative {
+  description: string;
+  /** Traits only just appearing in the data — empty unless the evidence shows a shift. */
+  emergingTraits: string[];
+  aiGenerated: boolean;
+  /** ISO timestamp, present only for generated copy. */
+  generatedAt?: string;
+}
+
 export interface EntertainmentIdentity {
   archetype: IdentityArchetype;
+  /** Wording for the archetype — AI-written when available, Aurora's own otherwise. */
+  narrative: IdentityNarrative;
   /** "clear" states it plainly; "emerging" hedges harder in the copy. */
   confidence: "clear" | "emerging";
   /** Countable receipts — the whole point. Never empty when an identity is returned. */

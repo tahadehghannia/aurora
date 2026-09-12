@@ -4,12 +4,15 @@ import { buildTasteSignal } from "@/lib/recommendations/signals";
 import { songToCard } from "@/lib/content/mappers";
 import { parsePrompt } from "@/lib/ai/prompt-parser";
 import type { ContentCard } from "@/types/content";
+import { curatePlaylistWithAi } from "@/lib/ai/playlist-ai";
 import type { GeneratedItem } from "@/lib/ai/watchlist";
 
 export interface GeneratedPlaylist {
   title: string;
   description: string;
   items: GeneratedItem[];
+  /** True when a model chose the ordering and wrote the copy (§30). */
+  aiCurated?: boolean;
 }
 
 function titleCase(words: string[]): string {
@@ -78,8 +81,45 @@ export async function generatePlaylist(userId: string, prompt: string): Promise<
     return { card, reason };
   });
 
+  const byId = new Map(items.map((item) => [item.card.id, item.reason]));
+
   const titleParts = [...intent.moods.slice(0, 2), ...intent.genres.slice(0, 1)];
   const title = titleParts.length > 0 ? `${titleCase(titleParts)} Playlist` : "Your AI Playlist";
+
+  // Curation runs over the ranked shortlist Aurora just built. The candidate
+  // pool is wider than the final list so the model has room to sequence.
+  const tasteSummary: string[] = [];
+  const topGenres = [...signal.genreWeights.entries()]
+    .filter(([, w]) => w > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([g]) => g);
+  if (topGenres.length > 0) tasteSummary.push(`Listens to: ${topGenres.join(", ")}`);
+
+  const curated = await curatePlaylistWithAi(
+    prompt.trim(),
+    scored.slice(0, 30).map(({ card }) => ({ card, reason: byId.get(card.id) ?? "Matches your taste." })),
+    tasteSummary
+  );
+
+  if (curated) {
+    const cardById = new Map(scored.map(({ card }) => [card.id, card]));
+    const curatedItems: GeneratedItem[] = curated.items
+      .map((item) => {
+        const card = cardById.get(item.contentId);
+        return card ? { card, reason: item.reason } : null;
+      })
+      .filter((item): item is GeneratedItem => item !== null);
+
+    if (curatedItems.length > 0) {
+      return {
+        title: curated.title,
+        description: curated.description,
+        items: curatedItems.slice(0, intent.count),
+        aiCurated: true,
+      };
+    }
+  }
 
   return { title, description: prompt.trim(), items };
 }

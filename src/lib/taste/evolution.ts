@@ -1,5 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/db/prisma";
+import { generateEvolutionCopy } from "@/lib/taste/narrative-ai";
+import type { TasteNarrative } from "@/lib/taste/narrative-types";
 
 export interface TasteEvolutionPeriod {
   label: string;
@@ -9,6 +11,10 @@ export interface TasteEvolutionPeriod {
 export interface TasteEvolution {
   available: boolean;
   periods: TasteEvolutionPeriod[];
+  /** AI summary of the change across periods — null when unavailable (§28). */
+  narrative?: TasteNarrative | null;
+  /** A short label for the direction of travel, e.g. "toward slower stories". */
+  shift?: string;
 }
 
 /** A period needs at least this many rated/saved items before its top genres are shown. */
@@ -23,7 +29,10 @@ const MIN_PERIODS = 2;
  * single period (the common case for a new account) correctly gets
  * `available: false` rather than a fabricated timeline.
  */
-export async function getTasteEvolution(userId: string): Promise<TasteEvolution> {
+export async function getTasteEvolution(
+  userId: string,
+  options: { force?: boolean } = {}
+): Promise<TasteEvolution> {
   const [ratings, saved] = await Promise.all([
     prisma.rating.findMany({
       where: { userId },
@@ -61,8 +70,21 @@ export async function getTasteEvolution(userId: string): Promise<TasteEvolution>
     .filter((p) => p.total >= MIN_ITEMS_PER_PERIOD && p.topGenres.length > 0)
     .map(({ year, topGenres }) => ({ label: String(year), topGenres }));
 
-  return {
+  const evolution: TasteEvolution = {
     available: periods.length >= MIN_PERIODS,
     periods,
   };
+
+  // Only ever asked to describe change across periods Aurora actually measured.
+  const copy = await generateEvolutionCopy(userId, evolution, options);
+  if (copy) {
+    evolution.narrative = {
+      summary: copy.data.summary,
+      aiGenerated: true,
+      generatedAt: copy.generatedAt.toISOString(),
+    };
+    if (copy.data.shift) evolution.shift = copy.data.shift;
+  }
+
+  return evolution;
 }

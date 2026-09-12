@@ -1,6 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/db/prisma";
 import { buildTasteSignal, type TasteSignal } from "@/lib/recommendations/signals";
+import { generateDnaCopy } from "@/lib/taste/narrative-ai";
+import type { DnaTrait, TasteNarrative } from "@/lib/taste/narrative-types";
 
 export type Confidence = "strong" | "emerging" | "exploring";
 
@@ -20,6 +22,10 @@ export interface FavoriteArtist extends WeightedLabel {
 
 export interface EntertainmentDNA {
   hasEnoughSignal: boolean;
+  /** AI summary of the patterns below — null when unavailable (§28). */
+  narrative?: TasteNarrative | null;
+  /** Evidence-backed traits the model drew out; empty unless AI ran. */
+  aiTraits?: DnaTrait[];
   /** A handful of top mood/style descriptors — the "Your Taste" chip row. */
   yourTaste: string[];
   favoriteGenres: WeightedLabel[];
@@ -57,7 +63,11 @@ function topEntries(map: Map<string, number>, limit: number): WeightedLabel[] {
  * a real genre/mood/artist/director/actor weight computed from the user's
  * own ratings, saves, and watch/listen history in buildTasteSignal.
  */
-export async function getEntertainmentDNA(userId: string, signal?: TasteSignal): Promise<EntertainmentDNA> {
+export async function getEntertainmentDNA(
+  userId: string,
+  signal?: TasteSignal,
+  options: { force?: boolean } = {}
+): Promise<EntertainmentDNA> {
   const taste = signal ?? (await buildTasteSignal(userId));
 
   const favoriteGenres = topEntries(taste.genreWeights, 6);
@@ -111,7 +121,7 @@ export async function getEntertainmentDNA(userId: string, signal?: TasteSignal):
   // as descriptive adjectives — not a fabricated personality label.
   const yourTaste = favoriteMoods.slice(0, 3).map((m) => m.name);
 
-  return {
+  const dna: EntertainmentDNA = {
     hasEnoughSignal: taste.hasSignal,
     yourTaste,
     favoriteGenres,
@@ -120,4 +130,18 @@ export async function getEntertainmentDNA(userId: string, signal?: TasteSignal):
     favoriteActors,
     favoriteArtists,
   };
+
+  // The model summarises the patterns Aurora measured; it never adds one.
+  // A failure leaves the structured DNA above exactly as it is (§28).
+  const copy = await generateDnaCopy(userId, dna, options);
+  if (copy) {
+    dna.narrative = {
+      summary: copy.data.summary,
+      aiGenerated: true,
+      generatedAt: copy.generatedAt.toISOString(),
+    };
+    dna.aiTraits = copy.data.traits;
+  }
+
+  return dna;
 }

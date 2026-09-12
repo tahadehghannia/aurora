@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { EmptyState } from "@/components/states/empty-state";
 import { CreateCollectionDialog } from "@/components/library/create-collection-dialog";
 import { AiWatchlistDialog } from "@/components/library/ai-watchlist-dialog";
+import { MoodEntry } from "@/components/mood/mood-entry";
 
 export const metadata: Metadata = { title: "Collections · Library" };
 
@@ -21,6 +22,8 @@ export default async function CollectionsLibraryPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <MoodEntry />
+
       <div className="flex justify-end gap-2">
         <AiWatchlistDialog />
         <CreateCollectionDialog />

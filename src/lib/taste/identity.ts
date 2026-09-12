@@ -2,8 +2,14 @@ import "server-only";
 import { prisma } from "@/lib/db/prisma";
 import { buildTasteSignal } from "@/lib/recommendations/signals";
 import { getTasteSpectrums, MIN_SAMPLE } from "@/lib/taste/spectrums";
-import { isTakingShape, type IdentityEvidence, type IdentityResult } from "@/lib/taste/identity-types";
+import {
+  isTakingShape,
+  type EntertainmentIdentity,
+  type IdentityEvidence,
+  type IdentityResult,
+} from "@/lib/taste/identity-types";
 import { matchIdentity, matchConfidence } from "@/lib/taste/identity-model";
+import { generateIdentityCopy } from "@/lib/taste/identity-ai";
 
 /** Below this many deliberate signals, Aurora doesn't claim to know who you are. */
 const MIN_SIGNALS = 8;
@@ -17,7 +23,10 @@ const MIN_SIGNALS = 8;
  * it. Otherwise the caller gets the taking-shape state and the user gets an
  * honest empty state instead of a horoscope.
  */
-export async function getEntertainmentIdentity(userId: string): Promise<IdentityResult> {
+export async function getEntertainmentIdentity(
+  userId: string,
+  options: { force?: boolean } = {}
+): Promise<IdentityResult> {
   const [signal, spectrums, ratingCount, savedCount, watchCount] = await Promise.all([
     buildTasteSignal(userId),
     getTasteSpectrums(userId),
@@ -76,13 +85,34 @@ export async function getEntertainmentIdentity(userId: string): Promise<Identity
     .slice(0, 4)
     .map(([mood]) => mood);
 
-  return {
+  const identity: EntertainmentIdentity = {
     archetype: match.archetype,
     confidence: matchConfidence(spectrums),
     evidence,
     spectrums,
     traits,
+    // Aurora's own wording, used as-is when no model is available.
+    narrative: {
+      description: match.archetype.summary,
+      emergingTraits: [],
+      aiGenerated: false,
+    },
   };
+
+  // The model describes the archetype Aurora already matched; it never picks
+  // one. A failure here leaves the deterministic wording above untouched.
+  const copy = await generateIdentityCopy(userId, identity, options);
+  if (copy) {
+    identity.narrative = {
+      description: copy.data.description,
+      emergingTraits: copy.data.emergingTraits,
+      aiGenerated: true,
+      generatedAt: copy.generatedAt.toISOString(),
+    };
+    if (copy.data.traits.length > 0) identity.traits = copy.data.traits;
+  }
+
+  return identity;
 }
 
 export { MIN_SAMPLE, isTakingShape };

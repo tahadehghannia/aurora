@@ -8,7 +8,7 @@ import { getAlbumBySlug } from "@/lib/content/queries";
 import { albumToCard } from "@/lib/content/mappers";
 import { getSimilarTo } from "@/lib/recommendations";
 import { buildTasteSignal } from "@/lib/recommendations/signals";
-import { whyRecommended } from "@/lib/recommendations/why-this";
+import { whyRecommendedWithAi } from "@/lib/recommendations/why-this";
 import { getUserContentState } from "@/lib/content/user-state";
 import { GenreBadges } from "@/components/detail/genre-badges";
 import { DetailActions } from "@/components/detail/detail-actions";
@@ -49,7 +49,7 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
   ]);
 
   const card = albumToCard(album);
-  const whyThis = whyRecommended(card, signal);
+  const whyThis = await whyRecommendedWithAi(card, signal, userId);
 
   return (
     <div className="flex flex-col gap-10 pb-16">

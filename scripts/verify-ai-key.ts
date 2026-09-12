@@ -14,6 +14,9 @@ import "dotenv/config";
 
 const ENV_VAR = "AI_API_KEY";
 const KEY = process.env[ENV_VAR]?.trim() ?? "";
+/** Gateway overrides. The app honours these, so verification must too. */
+const BASE_URL_OVERRIDE = process.env["AI_BASE_URL"]?.trim() ?? "";
+const PROVIDER_OVERRIDE = process.env["AI_PROVIDER"]?.trim().toLowerCase() ?? "";
 
 /**
  * Strip the credential out of anything on its way to stdout.
@@ -33,6 +36,8 @@ function redact(value: unknown): string {
 }
 
 interface Candidate {
+  /** Stable id, matched against AI_PROVIDER. */
+  id: string;
   name: string;
   /** A free, non-generative endpoint — listing models costs no tokens. */
   url: string;
@@ -44,6 +49,7 @@ interface Candidate {
 
 const CANDIDATES: Candidate[] = [
   {
+    id: "anthropic",
     name: "Anthropic",
     url: "https://api.anthropic.com/v1/models",
     headers: { "x-api-key": KEY, "anthropic-version": "2023-06-01" },
@@ -51,6 +57,7 @@ const CANDIDATES: Candidate[] = [
     docs: "https://console.anthropic.com/settings/keys",
   },
   {
+    id: "openai",
     name: "OpenAI",
     url: "https://api.openai.com/v1/models",
     headers: { Authorization: `Bearer ${KEY}` },
@@ -58,6 +65,7 @@ const CANDIDATES: Candidate[] = [
     docs: "https://platform.openai.com/api-keys",
   },
   {
+    id: "google",
     name: "Google Gemini",
     url: "https://generativelanguage.googleapis.com/v1beta/models",
     // Header auth, not ?key= — a credential must never sit in a URL.
@@ -66,6 +74,7 @@ const CANDIDATES: Candidate[] = [
     docs: "https://aistudio.google.com/app/apikey",
   },
   {
+    id: "mistral",
     name: "Mistral",
     url: "https://api.mistral.ai/v1/models",
     headers: { Authorization: `Bearer ${KEY}` },
@@ -73,6 +82,7 @@ const CANDIDATES: Candidate[] = [
     docs: "https://console.mistral.ai/api-keys",
   },
   {
+    id: "groq",
     name: "Groq",
     url: "https://api.groq.com/openai/v1/models",
     headers: { Authorization: `Bearer ${KEY}` },
@@ -80,6 +90,7 @@ const CANDIDATES: Candidate[] = [
     docs: "https://console.groq.com/keys",
   },
   {
+    id: "deepseek",
     name: "DeepSeek",
     url: "https://api.deepseek.com/models",
     headers: { Authorization: `Bearer ${KEY}` },
@@ -145,13 +156,37 @@ async function main(): Promise<number> {
   const shape = /^[0-9a-f]+$/.test(KEY) ? "lowercase hex" : "mixed";
   console.log(`${ENV_VAR}: present (${KEY.length} chars, ${shape}, key itself never printed)\n`);
 
-  const detected = CANDIDATES.find((c) => c.prefixes.some((p) => KEY.startsWith(p)));
-  const targets = detected ? [detected] : CANDIDATES;
-
-  if (detected) {
-    console.log(`Key prefix identifies: ${detected.name}. Verifying...\n`);
+  // A gateway key often carries an upstream vendor's prefix (an OpenAI-style
+  // "sk-" is common), so prefix routing would send it to the wrong host and
+  // report a false INVALID. An explicit base URL always wins.
+  let targets: Candidate[];
+  if (BASE_URL_OVERRIDE) {
+    const named = PROVIDER_OVERRIDE ? CANDIDATES.find((c) => c.id === PROVIDER_OVERRIDE) : undefined;
+    const base = BASE_URL_OVERRIDE.replace(/\/+$/, "");
+    targets = [
+      {
+        id: named?.id ?? "custom",
+        name: `${named?.name ?? "Custom"} @ ${new URL(base).host}`,
+        url: `${base}/models`,
+        headers: named?.id === "anthropic"
+          ? { "x-api-key": KEY, "anthropic-version": "2023-06-01" }
+          : named?.id === "google"
+            ? { "x-goog-api-key": KEY }
+            : { Authorization: `Bearer ${KEY}` },
+        prefixes: [],
+        docs: base,
+      },
+    ];
+    console.log(`AI_BASE_URL is set — verifying against that endpoint only.\n`);
   } else {
-    console.log("Key prefix matches no known provider. Probing all candidates...\n");
+    const detected = CANDIDATES.find((c) => c.prefixes.some((p) => KEY.startsWith(p)));
+    targets = detected ? [detected] : CANDIDATES;
+
+    if (detected) {
+      console.log(`Key prefix identifies: ${detected.name}. Verifying...\n`);
+    } else {
+      console.log("Key prefix matches no known provider. Probing all candidates...\n");
+    }
   }
 
   const results = await Promise.all(targets.map(probe));
@@ -181,6 +216,12 @@ async function main(): Promise<number> {
   console.log("INVALID — no provider accepted this credential.");
   console.log("The requests reached each provider and were rejected on authentication,");
   console.log("so this is a bad/wrong key rather than a network or endpoint problem.");
+  if (!BASE_URL_OVERRIDE) {
+    console.log("");
+    console.log("If this key belongs to a gateway or proxy rather than the vendor itself,");
+    console.log("set AI_BASE_URL (and AI_PROVIDER for the wire format) and run this again —");
+    console.log("a gateway key is expected to fail against the upstream vendor's own API.");
+  }
   return 1;
 }
 

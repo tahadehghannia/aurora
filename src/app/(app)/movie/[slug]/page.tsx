@@ -7,7 +7,7 @@ import { getMovieBySlug } from "@/lib/content/queries";
 import { movieToCard } from "@/lib/content/mappers";
 import { getSimilarTo, getExploreBeyond } from "@/lib/recommendations";
 import { buildTasteSignal } from "@/lib/recommendations/signals";
-import { whyRecommended } from "@/lib/recommendations/why-this";
+import { whyRecommendedWithAi } from "@/lib/recommendations/why-this";
 import { getUserContentState } from "@/lib/content/user-state";
 import { GenreBadges } from "@/components/detail/genre-badges";
 import { DetailActions } from "@/components/detail/detail-actions";
@@ -43,7 +43,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
   ]);
 
   const card = movieToCard(movie);
-  const whyThis = whyRecommended(card, signal);
+  const whyThis = await whyRecommendedWithAi(card, signal, userId);
 
   return (
     <div className="flex flex-col gap-10 pb-16">

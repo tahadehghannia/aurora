@@ -15,12 +15,22 @@ import { ContentGrid, ContentGridSkeleton } from "@/components/content/content-g
 import { ContentRow, ContentRowSkeleton } from "@/components/content/content-row";
 import { RankedList } from "@/components/content/ranked-list";
 import { EmptyState } from "@/components/states/empty-state";
+import { MoodEntry } from "@/components/mood/mood-entry";
 import { FilterBar } from "@/components/discover/filter-bar";
 
 export const metadata: Metadata = { title: "Discover" };
 
 interface DiscoverPageProps {
   searchParams: Promise<{ kind?: string; genre?: string; mood?: string; sort?: string }>;
+}
+
+
+/** Turns the active Discover filter into a sentence the mood parser understands. */
+function moodPrompt(mood?: string, genre?: string): string | undefined {
+  if (mood && genre) return `Something ${mood.toLowerCase()} — ${genre}`;
+  if (mood) return `Something ${mood.toLowerCase()}`;
+  if (genre) return `Something ${genre}`;
+  return undefined;
 }
 
 export default async function DiscoverPage({ searchParams }: DiscoverPageProps) {
@@ -33,6 +43,19 @@ export default async function DiscoverPage({ searchParams }: DiscoverPageProps) 
       <div className="px-4 sm:px-8">
         <h1 className="text-h4 font-semibold">Discover</h1>
         <p className="text-body-sm text-muted-foreground">Explore without needing to search.</p>
+      </div>
+
+      {/* Bridges browsing into personalization, carrying the current filter as
+          the request so the list starts from what they were already exploring (§39). */}
+      <div className="px-4 sm:px-8">
+        <MoodEntry
+          prompt={moodPrompt(params.mood, params.genre)}
+          label={
+            params.mood || params.genre
+              ? `Build a ${(params.mood ?? params.genre ?? "").toLowerCase()} watchlist for me`
+              : undefined
+          }
+        />
       </div>
 
       <div className="px-4 sm:px-8">

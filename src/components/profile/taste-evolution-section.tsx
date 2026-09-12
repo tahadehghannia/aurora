@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { slugifyGenre } from "@/lib/utils";
+import { RegenerateInsight } from "@/components/profile/regenerate-insight";
 import type { TasteEvolution } from "@/lib/taste/evolution";
 
 interface TasteEvolutionSectionProps {
@@ -9,10 +10,22 @@ interface TasteEvolutionSectionProps {
 export function TasteEvolutionSection({ evolution }: TasteEvolutionSectionProps) {
   return (
     <section className="space-y-4">
-      <div>
-        <h2 className="text-h6 font-semibold">Taste Evolution</h2>
-        <p className="text-body-sm text-muted-foreground">How your entertainment identity has changed over time.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-h6 font-semibold">Taste Evolution</h2>
+          <p className="text-body-sm text-muted-foreground">How your entertainment identity has changed over time.</p>
+        </div>
+        {evolution.narrative?.aiGenerated && <RegenerateInsight kind="TASTE_EVOLUTION" />}
       </div>
+
+      {evolution.narrative && (
+        <div className="space-y-1">
+          <p className="max-w-2xl text-body text-foreground">{evolution.narrative.summary}</p>
+          <p className="text-caption text-muted-foreground">
+            Aurora&apos;s interpretation of your taste, generated from your activity.
+          </p>
+        </div>
+      )}
 
       {!evolution.available ? (
         <p className="text-body-sm text-muted-foreground">

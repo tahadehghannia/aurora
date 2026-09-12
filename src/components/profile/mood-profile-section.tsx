@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { RegenerateInsight } from "@/components/profile/regenerate-insight";
 import Link from "next/link";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { toast } from "sonner";
@@ -120,10 +121,24 @@ export function MoodProfileSection({ profile, interactive = true }: MoodProfileS
 
   return (
     <section className="space-y-4">
-      <div>
-        <h2 className="text-h6 font-semibold">Mood Profile</h2>
-        <p className="text-body-sm text-muted-foreground">The emotional states you tend to enjoy.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-h6 font-semibold">Mood Profile</h2>
+          {/* Moods describe the content, not the viewer — the old wording
+              ("emotional states you enjoy") read as a claim about the person. */}
+          <p className="text-body-sm text-muted-foreground">The moods you tend to reach for.</p>
+        </div>
+        {profile.narrative?.aiGenerated && <RegenerateInsight kind="MOOD_PROFILE" />}
       </div>
+
+      {profile.narrative && (
+        <div className="space-y-1">
+          <p className="max-w-2xl text-body text-foreground">{profile.narrative.summary}</p>
+          <p className="text-caption text-muted-foreground">
+            Aurora&apos;s interpretation of your taste, generated from your activity.
+          </p>
+        </div>
+      )}
 
       <div>
         {profile.mostEnjoyed.map((entry, i) => (

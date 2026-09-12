@@ -8,7 +8,7 @@ import { getShowBySlug } from "@/lib/content/queries";
 import { showToCard } from "@/lib/content/mappers";
 import { getSimilarTo, getExploreBeyond } from "@/lib/recommendations";
 import { buildTasteSignal } from "@/lib/recommendations/signals";
-import { whyRecommended } from "@/lib/recommendations/why-this";
+import { whyRecommendedWithAi } from "@/lib/recommendations/why-this";
 import { getUserContentState } from "@/lib/content/user-state";
 import { GenreBadges } from "@/components/detail/genre-badges";
 import { DetailActions } from "@/components/detail/detail-actions";
@@ -44,7 +44,7 @@ export default async function ShowPage({ params }: ShowPageProps) {
   ]);
 
   const card = showToCard(show);
-  const whyThis = whyRecommended(card, signal);
+  const whyThis = await whyRecommendedWithAi(card, signal, userId);
   const seasons = [...new Set(show.episodes.map((e) => e.season))].sort((a, b) => a - b);
 
   return (

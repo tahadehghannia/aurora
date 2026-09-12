@@ -3,10 +3,13 @@ import { getRecommendationsForUser } from "@/lib/recommendations";
 import { buildTasteSignal } from "@/lib/recommendations/signals";
 import { buildRecommendationReasons, type RecommendationReason } from "@/lib/recommendations/reasons";
 import { keyOf, selectNextPick } from "@/lib/recommendations/one-pick-select";
+import { pickOneWithAi } from "@/lib/recommendations/explain-ai";
 import type { ContentCard } from "@/types/content";
 
 export interface OnePick {
   card: ContentCard;
+  /** A model's one-line case for this pick, when it made the choice (§14). */
+  aiReason?: string;
   /** Grounded reasons from the same engine that powers "Why this?" everywhere else. */
   reasons: RecommendationReason[];
   /** The mood this pick speaks to, when the user has a real mood signal. */
@@ -40,8 +43,26 @@ export async function getOnePerfectPick(userId: string, exclude: string[] = []):
   ]);
   if (pool.length === 0) return null;
 
-  const chosen = selectNextPick(pool, exclude);
-  if (!chosen) return null;
+  const deterministic = selectNextPick(pool, exclude);
+  if (!deterministic) return null;
+
+  // Aurora builds the shortlist and its evidence; the model may choose within
+  // it. An id outside the shortlist is rejected by pickOneWithAi, and any
+  // failure leaves the deterministic choice standing (§28).
+  const shortlist = pool
+    .filter((card) => !exclude.includes(keyOf(card)))
+    .slice(0, 12)
+    .map((card) => ({
+      card,
+      reasons: buildRecommendationReasons(card, signal).filter((r) => r.reasonType !== "EXPLORATION"),
+    }));
+
+  const topMoodForContext = [...signal.moodWeights.entries()]
+    .filter(([, weight]) => weight > 0)
+    .sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  const aiChoice = await pickOneWithAi(shortlist, { mood: topMoodForContext ?? null });
+  const chosen = aiChoice ? (shortlist.find((c) => c.card.id === aiChoice.contentId)?.card ?? deterministic) : deterministic;
 
   const likedAnchors = signal.likedTitles
     .filter((liked) => typeof liked.score === "number" && liked.score >= 4)
@@ -55,6 +76,7 @@ export async function getOnePerfectPick(userId: string, exclude: string[] = []):
   return {
     card: chosen,
     reasons: buildRecommendationReasons(chosen, signal).filter((r) => r.reasonType !== "EXPLORATION"),
+    ...(aiChoice && aiChoice.contentId === chosen.id ? { aiReason: aiChoice.reason } : {}),
     moodContext: topMood ?? null,
     likedAnchors,
     shownKeys: [...exclude, keyOf(chosen)],
