@@ -1,0 +1,291 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------- */
+/* Aurora design tokens                                                   */
+/* ---------------------------------------------------------------------- */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-inter);
+  --font-fa: var(--font-vazirmatn);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* Aurora semantic accents (theme-stable) */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-pressed: var(--brand-pressed);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-ai: var(--ai);
+  --color-ai-foreground: var(--ai-foreground);
+  --color-rating: var(--rating);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-2: var(--surface-2);
+  --color-surface-active: var(--surface-active);
+  --color-cream: var(--cream);
+  --color-warm-gray: var(--warm-gray);
+
+  /* Raw palette, exposed as utilities */
+  --color-cinematic-50: #fbebec;
+  --color-cinematic-100: #f5d0d3;
+  --color-cinematic-200: #e59aa1;
+  --color-cinematic-300: #d66670;
+  --color-cinematic-400: #d94a59;
+  --color-cinematic-500: #c23b4a;
+  --color-cinematic-600: #9e2e3a;
+  --color-cinematic-700: #7a232c;
+  --color-cinematic-800: #55181e;
+  --color-cinematic-900: #2a1115;
+
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f5f5f7;
+  --color-neutral-100: #ebebed;
+  --color-neutral-200: #d6d1c7;
+  --color-neutral-300: #a1a1a6;
+  --color-neutral-400: #6e6e73;
+  --color-neutral-500: #48484a;
+  --color-neutral-600: #3a3a3c;
+  --color-neutral-700: #242426;
+  --color-neutral-800: #1c1c1e;
+  --color-neutral-900: #121212;
+  --color-neutral-950: #0a0a0a;
+  --color-neutral-1000: #000000;
+
+  --color-cream: #f2efe8;
+  --color-warm-gray: #d6d1c7;
+
+  --color-green-400: #4ade80;
+  --color-green-500: #30d158;
+  --color-green-600: #16a34a;
+  --color-green-700: #15803d;
+
+  --color-amber-400: #ffd60a;
+  --color-amber-500: #ffd60a;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+
+  --color-red-400: #ff6961;
+  --color-red-500: #ff453a;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+
+  --color-blue-400: #64d2ff;
+  --color-blue-500: #64d2ff;
+
+  /* Radius scale */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* Type scale (matches Aurora spec) */
+  --text-display-xl: 4rem;
+  --text-display-xl--line-height: 4.5rem;
+  --text-display-xl--font-weight: 700;
+  --text-display-l: 3.5rem;
+  --text-display-l--line-height: 4rem;
+  --text-display-l--font-weight: 700;
+  --text-h1: 3rem;
+  --text-h1--line-height: 3.5rem;
+  --text-h1--font-weight: 700;
+  --text-h2: 2.5rem;
+  --text-h2--line-height: 3rem;
+  --text-h2--font-weight: 700;
+  --text-h3: 2rem;
+  --text-h3--line-height: 2.5rem;
+  --text-h3--font-weight: 600;
+  --text-h4: 1.75rem;
+  --text-h4--line-height: 2.25rem;
+  --text-h4--font-weight: 600;
+  --text-h5: 1.5rem;
+  --text-h5--line-height: 2rem;
+  --text-h5--font-weight: 600;
+  --text-h6: 1.25rem;
+  --text-h6--line-height: 1.75rem;
+  --text-h6--font-weight: 600;
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.75rem;
+  --text-body-md: 1rem;
+  --text-body-md--line-height: 1.5rem;
+  --text-body-sm: 0.875rem;
+  --text-body-sm--line-height: 1.25rem;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+
+  /* Shadows: subtle, dark-first */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 8px 24px -4px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 16px 48px -8px rgba(0, 0, 0, 0.4);
+}
+
+/* Light theme — restrained, its own hierarchy (not an inverted dark theme) */
+:root {
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff;
+  --popover-foreground: #1d1d1f;
+  /* #a92f3d, the spec's dedicated light-mode accent — #c23b4a's white-text contrast
+     is weaker against a white surface, so light mode gets a slightly deepened accent. */
+  --primary: #a92f3d;
+  --primary-foreground: #ffffff;
+  --secondary: #ebebed;
+  --secondary-foreground: #1d1d1f;
+  --muted: #ebebed;
+  --muted-foreground: #6e6e73;
+  --accent: #ebebed;
+  --accent-foreground: #1d1d1f;
+  --destructive: var(--color-red-600);
+  --border: #d6d1c7;
+  --input: #d6d1c7;
+  --ring: #a92f3d;
+  --radius: 0.75rem;
+
+  --brand: #a92f3d;
+  --brand-foreground: #ffffff;
+  --brand-hover: #b8404e;
+  --brand-pressed: #8a2632;
+  --brand-subtle: #f5e3e0;
+  --ai: var(--color-neutral-400);
+  --ai-foreground: var(--color-neutral-400);
+  --rating: #b8860a;
+  --success: #1a8a3d;
+  --warning: #b8860a;
+  --error: #d6362b;
+  --info: #0a7ea8;
+  --surface: #ffffff;
+  --surface-2: #ebebed;
+  --surface-elevated: #ffffff;
+  --surface-active: #f5e3e0;
+  --cream: #f2efe8;
+  --warm-gray: #d6d1c7;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1d1d1f;
+  --sidebar-primary: #a92f3d;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ebebed;
+  --sidebar-accent-foreground: #1d1d1f;
+  --sidebar-border: #d6d1c7;
+  --sidebar-ring: #a92f3d;
+}
+
+/* Dark theme — Aurora's primary theme: Apple restraint x cinematic color */
+.dark {
+  --background: #000000;
+  --foreground: #f5f5f7;
+  --card: #121212;
+  --card-foreground: #f5f5f7;
+  --popover: #1c1c1e;
+  --popover-foreground: #f5f5f7;
+  --primary: #c23b4a;
+  --primary-foreground: #ffffff;
+  --secondary: #1c1c1e;
+  --secondary-foreground: #f5f5f7;
+  --muted: #1c1c1e;
+  --muted-foreground: #a1a1a6;
+  --accent: #1c1c1e;
+  --accent-foreground: #f5f5f7;
+  --destructive: #ff453a;
+  --border: #1c1c1e;
+  --input: #242426;
+  --ring: #c23b4a;
+  --radius: 0.75rem;
+
+  --brand: #c23b4a;
+  --brand-foreground: #ffffff;
+  --brand-hover: #d94a59;
+  --brand-pressed: #9e2e3a;
+  --brand-subtle: #2a1115;
+  /* No separate AI hue — personalization copy reads as quiet text, not a colored
+     signal. The cinematic accent stays reserved for actions and selection. */
+  --ai: var(--color-neutral-300);
+  --ai-foreground: var(--color-neutral-300);
+  --rating: #ffd60a;
+  --success: #30d158;
+  --warning: #ffd60a;
+  --error: #ff453a;
+  --info: #64d2ff;
+  --surface: #121212;
+  --surface-2: #242426;
+  --surface-elevated: #1c1c1e;
+  --surface-active: #2a1115;
+  --cream: #f2efe8;
+  --warm-gray: #d6d1c7;
+
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #f5f5f7;
+  --sidebar-primary: #c23b4a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1c1c1e;
+  --sidebar-accent-foreground: #f5f5f7;
+  --sidebar-border: #1c1c1e;
+  --sidebar-ring: #c23b4a;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  ::selection {
+    background-color: var(--brand);
+    color: var(--brand-foreground);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
