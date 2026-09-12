@@ -13,7 +13,8 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:seed:live": "tsx prisma/seed-live.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "ai:verify": "tsx scripts/verify-ai-key.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
