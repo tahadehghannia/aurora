@@ -8,11 +8,10 @@ import { getShowBySlug } from "@/lib/content/queries";
 import { showToCard } from "@/lib/content/mappers";
 import { getSimilarTo, getExploreBeyond } from "@/lib/recommendations";
 import { buildTasteSignal } from "@/lib/recommendations/signals";
-import { whyRecommendedWithAi } from "@/lib/recommendations/why-this";
 import { getUserContentState } from "@/lib/content/user-state";
 import { GenreBadges } from "@/components/detail/genre-badges";
 import { DetailActions } from "@/components/detail/detail-actions";
-import { WhyRecommended } from "@/components/detail/why-recommended";
+import { WhyRecommendedSection } from "@/components/detail/why-recommended-section";
 import { ContentRow } from "@/components/content/content-row";
 import { CrossMediaSection } from "@/components/content/cross-media-section";
 import { getCrossMediaConnections } from "@/lib/crossmedia/discovery";
@@ -44,7 +43,6 @@ export default async function ShowPage({ params }: ShowPageProps) {
   ]);
 
   const card = showToCard(show);
-  const whyThis = await whyRecommendedWithAi(card, signal, userId);
   const seasons = [...new Set(show.episodes.map((e) => e.season))].sort((a, b) => a - b);
 
   return (
@@ -91,7 +89,7 @@ export default async function ShowPage({ params }: ShowPageProps) {
         <div className="max-w-2xl space-y-2">
           <h2 className="text-h6 font-semibold">Overview</h2>
           <p className="text-body-md text-muted-foreground">{show.overview}</p>
-          <WhyRecommended whyThis={whyThis} card={card} />
+          <WhyRecommendedSection card={card} signal={signal} userId={userId} />
         </div>
 
         {show.cast.length > 0 && (

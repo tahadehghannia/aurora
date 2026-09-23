@@ -20,7 +20,9 @@ export type AiFailureReason =
   | "rate_limited"
   | "timeout"
   | "server_error"
-  | "invalid_output";
+  | "invalid_output"
+  /** The caller went away mid-flight — a navigation, not a provider fault. */
+  | "aborted";
 
 export type AiOutcome<T> =
   | { ok: true; data: T; provider: string; model: string }
@@ -34,6 +36,7 @@ export const AI_FAILURE_COPY: Record<AiFailureReason, string> = {
   timeout: "AI curation took too long, so Aurora ranked this list itself.",
   server_error: "AI curation is unavailable right now, so Aurora ranked this list itself.",
   invalid_output: "AI curation returned something unusable, so Aurora ranked this list itself.",
+  aborted: "That request was cancelled before it finished.",
 };
 
 /** Attempts per call: one retry for transient faults, then give up. */
@@ -63,7 +66,9 @@ function classify(error: unknown): AiFailureReason {
   if (error instanceof AiProviderError) {
     if (error.status === 401 || error.status === 403) return "auth";
     if (error.status === 429) return "rate_limited";
-    if (error.status === null) return "timeout";
+    // A transport failure the provider marked non-retryable is a cancelled
+    // request, not a slow one.
+    if (error.status === null) return error.retryable ? "timeout" : "aborted";
     return "server_error";
   }
   return "server_error";
@@ -172,6 +177,10 @@ export async function generateStructured<T>(request: StructuredRequest<T>): Prom
         return { ok: false, reason: lastReason };
       }
       // Neither will an exhausted quota, within the next few seconds.
+      if (lastReason === "aborted") {
+        finish(false, lastReason);
+        return { ok: false, reason: lastReason };
+      }
       if (lastReason === "rate_limited") {
         rateLimitedUntil = Date.now() + COOLDOWN_MS;
         finish(false, lastReason);

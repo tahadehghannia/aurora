@@ -8,11 +8,10 @@ import { getAlbumBySlug } from "@/lib/content/queries";
 import { albumToCard } from "@/lib/content/mappers";
 import { getSimilarTo } from "@/lib/recommendations";
 import { buildTasteSignal } from "@/lib/recommendations/signals";
-import { whyRecommendedWithAi } from "@/lib/recommendations/why-this";
 import { getUserContentState } from "@/lib/content/user-state";
 import { GenreBadges } from "@/components/detail/genre-badges";
 import { DetailActions } from "@/components/detail/detail-actions";
-import { WhyRecommended } from "@/components/detail/why-recommended";
+import { WhyRecommendedSection } from "@/components/detail/why-recommended-section";
 import { ContentRow } from "@/components/content/content-row";
 import { CrossMediaSection } from "@/components/content/cross-media-section";
 import { getCrossMediaConnections } from "@/lib/crossmedia/discovery";
@@ -49,7 +48,6 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
   ]);
 
   const card = albumToCard(album);
-  const whyThis = await whyRecommendedWithAi(card, signal, userId);
 
   return (
     <div className="flex flex-col gap-10 pb-16">
@@ -81,7 +79,7 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
           </div>
 
           <DetailActions kind="album" contentId={album.id} title={album.title} initialSaved={saved} initialUserScore={userScore} />
-          <WhyRecommended whyThis={whyThis} card={card} />
+          <WhyRecommendedSection card={card} signal={signal} userId={userId} />
         </div>
       </div>
 

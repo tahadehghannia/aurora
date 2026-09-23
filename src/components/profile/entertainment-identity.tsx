@@ -7,12 +7,20 @@ import { cn } from "@/lib/utils";
 import { RegenerateInsight } from "@/components/profile/regenerate-insight";
 import type { IdentityResult } from "@/lib/taste/identity-types";
 import { isTakingShape } from "@/lib/taste/identity-types";
-import { TasteSpectrums } from "@/components/profile/taste-spectrums";
+import { WhereTasteSits } from "@/components/profile/where-taste-sits";
 
 interface EntertainmentIdentityProps {
   identity: IdentityResult;
   /** First view gets the paced reveal; afterwards it renders immediately. */
   reveal?: boolean;
+  /**
+   * Hides the name, description and trait chips.
+   *
+   * Used when the animated portrait above is already showing them — repeating
+   * the identity as a heading directly beneath its own portrait reads as a
+   * layout bug, not emphasis.
+   */
+  headless?: boolean;
 }
 
 /** Steps in the reveal, in order. Pacing is the entire effect — no motion, just sequencing. */
@@ -37,7 +45,7 @@ function usePacedReveal(enabled: boolean): number {
   return step;
 }
 
-export function EntertainmentIdentity({ identity, reveal = false }: EntertainmentIdentityProps) {
+export function EntertainmentIdentity({ identity, reveal = false, headless = false }: EntertainmentIdentityProps) {
   const step = usePacedReveal(reveal);
   const [showEvidence, setShowEvidence] = useState(false);
 
@@ -77,7 +85,7 @@ export function EntertainmentIdentity({ identity, reveal = false }: Entertainmen
 
   return (
     <section className="space-y-8">
-      <div className="space-y-3">
+      <div className={cn("space-y-3", headless && "hidden")}>
         <p
           className={cn(
             "text-caption font-medium uppercase tracking-wide text-muted-foreground transition-opacity duration-500",
@@ -165,7 +173,7 @@ export function EntertainmentIdentity({ identity, reveal = false }: Entertainmen
 
       {spectrums.length > 0 && (
         <div className={cn("transition-opacity duration-700", step >= 3 ? "opacity-100" : "opacity-0")}>
-          <TasteSpectrums spectrums={spectrums} />
+          <WhereTasteSits spectrums={spectrums} />
         </div>
       )}
     </section>

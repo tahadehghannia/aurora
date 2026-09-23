@@ -80,7 +80,6 @@ export async function generateIdentityCopy(
     kind: "IDENTITY",
     prompt: IDENTITY_PROMPT,
     schema: aiIdentitySchema,
-    maxTokens: 900,
     ...(options.force === undefined ? {} : { force: options.force }),
     buildUser: () => buildIdentityEvidence(identity),
   });

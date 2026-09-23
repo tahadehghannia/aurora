@@ -140,7 +140,6 @@ export async function generateMoodProfileCopy(
     kind: "MOOD_PROFILE",
     prompt: MOOD_PROFILE_PROMPT,
     schema: aiMoodProfileSchema,
-    maxTokens: 700,
     ...(options.force === undefined ? {} : { force: options.force }),
     buildUser: () => buildMoodEvidence(profile),
   });
@@ -178,7 +177,6 @@ export async function generateEvolutionCopy(
     kind: "TASTE_EVOLUTION",
     prompt: EVOLUTION_PROMPT,
     schema: aiEvolutionSchema,
-    maxTokens: 800,
     ...(options.force === undefined ? {} : { force: options.force }),
     buildUser: () => buildEvolutionEvidence(evolution),
   });

@@ -146,15 +146,21 @@ export async function pickOneWithAi(
     ...lines,
   ].join("\n");
 
-  const outcome = await generateStructured({
-    task: "onePerfectPick",
-    promptVersion: ONE_PICK_PROMPT.version,
-    system: ONE_PICK_PROMPT.system,
-    user,
-    schema: onePickSchema,
-    maxTokens: 800,
-    timeoutMs: 10_000,
-  });
+  // Keyed on the shortlist itself: the same candidates with the same context
+  // can only have one answer, and Home renders this alongside other work that
+  // may ask for it concurrently (§26).
+  const key = `pick:${candidates.map((c) => c.card.id).join(",")}:${context.mood ?? ""}:${context.runtimeMaxMin ?? ""}`;
+  const outcome = await dedupe(key, () =>
+    generateStructured({
+      task: "onePerfectPick",
+      promptVersion: ONE_PICK_PROMPT.version,
+      system: ONE_PICK_PROMPT.system,
+      user,
+      schema: onePickSchema,
+      maxTokens: 800,
+      timeoutMs: 10_000,
+    })
+  );
 
   if (!outcome.ok) return null;
   if (!allowed.has(outcome.data.contentId)) return null;

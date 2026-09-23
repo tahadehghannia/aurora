@@ -59,9 +59,12 @@ async function postJson(
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
-    // Timeouts and network faults are transient by nature.
+    // Timeouts and network faults are transient by nature. An AbortError with
+    // no timeout is a different thing entirely — the caller went away, usually
+    // because the user navigated mid-render — and calling that a timeout makes
+    // the logs lie about what the provider did.
     const name = error instanceof Error ? error.name : "Error";
-    throw new AiProviderError(`transport failure (${name})`, null, true);
+    throw new AiProviderError(`transport failure (${name})`, null, name !== "AbortError");
   }
 
   if (!res.ok) {

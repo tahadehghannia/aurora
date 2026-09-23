@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Play, Info, Star } from "lucide-react";
@@ -37,8 +38,6 @@ export default async function HomePage() {
     becauseYouLiked,
     outsideUsualTaste,
     beyondYourUsual,
-    onePick,
-    identity,
     tasteInsights,
   ] = await Promise.all([
     prisma.profile.findUnique({ where: { userId } }),
@@ -51,8 +50,6 @@ export default async function HomePage() {
     getBecauseYouLiked(userId, 10),
     getOutsideUsualTaste(userId, 8),
     getBeyondYourUsual(userId),
-    getOnePerfectPick(userId),
-    getEntertainmentIdentity(userId),
     getTasteInsights(userId),
   ]);
 
@@ -114,15 +111,16 @@ export default async function HomePage() {
         </section>
       )}
 
-      {onePick && (
-        <div className="px-4 sm:px-8">
-          <TonightsPick initialPick={onePick} />
-        </div>
-      )}
+      {/* Both of these can involve a model call. Streaming them separately
+          keeps Home's hero and rails instant instead of holding the whole page
+          on an AI round-trip — the same treatment Profile already gets (§27). */}
+      <Suspense fallback={<PickSkeleton />}>
+        <TonightsPickBlock userId={userId} />
+      </Suspense>
 
-      <div className="px-4 sm:px-8">
-        <TasteSummaryCard identity={identity} insight={tasteInsights[0] ?? null} />
-      </div>
+      <Suspense fallback={<SummarySkeleton />}>
+        <TasteSummaryBlock userId={userId} insight={tasteInsights[0] ?? null} />
+      </Suspense>
 
       {/* A quiet doorway, sized as one row rather than a feature banner (§37). */}
       <div className="px-4 sm:px-8">
@@ -189,4 +187,43 @@ function greeting(): string {
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
+}
+
+/** Tonight's pick, streamed — the AI chooses from Aurora's ranked shortlist. */
+async function TonightsPickBlock({ userId }: { userId: string }) {
+  const onePick = await getOnePerfectPick(userId);
+  if (!onePick) return null;
+  return (
+    <div className="px-4 sm:px-8">
+      <TonightsPick initialPick={onePick} />
+    </div>
+  );
+}
+
+/** The Home summary reads the same identity model Profile uses (§32). */
+async function TasteSummaryBlock({ userId, insight }: { userId: string; insight: string | null }) {
+  const identity = await getEntertainmentIdentity(userId);
+  return (
+    <div className="px-4 sm:px-8">
+      <TasteSummaryCard identity={identity} insight={insight} />
+    </div>
+  );
+}
+
+function PickSkeleton() {
+  return (
+    <div className="px-4 sm:px-8" aria-hidden>
+      <div className="h-36 w-full animate-pulse rounded-xl bg-muted/60" />
+    </div>
+  );
+}
+
+function SummarySkeleton() {
+  return (
+    <div className="space-y-2 px-4 sm:px-8" aria-hidden>
+      <div className="h-3 w-28 animate-pulse rounded bg-muted" />
+      <div className="h-5 w-56 animate-pulse rounded bg-muted" />
+      <div className="h-3 w-72 max-w-full animate-pulse rounded bg-muted" />
+    </div>
+  );
 }

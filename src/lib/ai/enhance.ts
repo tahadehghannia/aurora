@@ -21,6 +21,18 @@ import type { PromptSpec } from "@/lib/ai/prompts";
  * and never its function.
  */
 
+/**
+ * Minimum output budget for any cached artifact.
+ *
+ * Reasoning models spend a large, invisible share of max_tokens thinking before
+ * emitting the first character of JSON, so a cap sized for the visible payload
+ * truncates the object and the whole response is discarded as unparseable.
+ * These artifacts are all small — the ceiling costs nothing when unused, since
+ * providers bill actual tokens, and undersizing it silently disables the
+ * feature. It was undersized here three separate times before this floor.
+ */
+const REASONING_FLOOR = 1800;
+
 export interface EnhancementResult<T> {
   data: T;
   /** True when served from cache — surfaced so the UI can offer a regenerate. */
@@ -45,7 +57,7 @@ interface EnhanceOptions<T> {
 }
 
 export async function enhance<T>(options: EnhanceOptions<T>): Promise<EnhancementResult<T> | null> {
-  const { userId, kind, prompt, schema, buildUser, maxTokens = 700, force = false } = options;
+  const { userId, kind, prompt, schema, buildUser, maxTokens = REASONING_FLOOR, force = false } = options;
 
   if (!isAiConfigured()) return null;
 

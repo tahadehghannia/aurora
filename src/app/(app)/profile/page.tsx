@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { buildTasteSignal } from "@/lib/recommendations/signals";
 import { getCardByKindAndId } from "@/lib/content/queries";
 import { getEntertainmentIdentity } from "@/lib/taste/identity";
+import { getDnaPortrait } from "@/lib/taste/dna-portrait";
 import { getEntertainmentDNA } from "@/lib/taste/dna";
 import { getEntertainmentHabits } from "@/lib/taste/habits";
 import { getMoodProfile } from "@/lib/taste/mood-profile";
@@ -26,6 +27,7 @@ import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileTabs } from "@/components/profile/profile-tabs";
 import { isProfileTab, type ProfileTab } from "@/components/profile/profile-tabs-config";
 import { EntertainmentIdentity } from "@/components/profile/entertainment-identity";
+import { DnaPortraitStage } from "@/components/profile/dna-portrait";
 import { IdentityCard } from "@/components/profile/identity-card";
 import { EntertainmentDnaSection } from "@/components/profile/entertainment-dna";
 import { MoodProfileSection } from "@/components/profile/mood-profile-section";
@@ -113,12 +115,21 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
  * whole tab on an AI round-trip (§27).
  */
 async function IdentityBlock({ userId, stats }: { userId: string; stats: Awaited<ReturnType<typeof getTasteStats>> }) {
-  const identity = await getEntertainmentIdentity(userId);
+  const [identity, portrait] = await Promise.all([getEntertainmentIdentity(userId), getDnaPortrait(userId)]);
+
+  // The portrait is the centrepiece (§30), and it already carries the identity
+  // name, description and traits in its centre — so the supporting block below
+  // renders headless, contributing only the spectrums, receipts and controls.
+  // With no artwork at all there is nothing to compose, and the plain identity
+  // block is the honest fallback.
+  const hasPortrait = portrait.items.length > 0;
+
   return (
-    <>
-      <EntertainmentIdentity identity={identity} reveal />
+    <div className="flex flex-col gap-8">
+      {hasPortrait && <DnaPortraitStage portrait={portrait} />}
+      <EntertainmentIdentity identity={identity} reveal={!hasPortrait} headless={hasPortrait} />
       <IdentityCard identity={identity} stats={stats} />
-    </>
+    </div>
   );
 }
 

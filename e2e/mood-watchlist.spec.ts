@@ -13,6 +13,12 @@ import { makeTestUser, signUpAndSkipOnboarding } from "./helpers";
 // reopen. Many steps, each fast; the default 30s budget is about step count.
 test.setTimeout(90_000);
 
+// .first() throughout: while `next dev` is still compiling, React's streamed
+// suspense fallback can leave a second copy of the form in the DOM, and a
+// strict-mode violation throws rather than retrying. Same convention as
+// search.spec.ts; it became more likely once Home and the detail pages started
+// streaming their AI sections.
+
 test("a natural-language mood request produces a real, explained, savable watchlist", async ({ page }) => {
   await signUpAndSkipOnboarding(page, makeTestUser("e2emood"));
 
@@ -33,7 +39,7 @@ test("a natural-language mood request produces a real, explained, savable watchl
   await expect(page.getByRole("heading", { name: "Create with AI" })).toBeVisible();
 
   // The request is free text, not a fixed taxonomy (§4).
-  await page.getByLabel("What are you in the mood for?").fill("Something calm and atmospheric, but not horror");
+  await page.getByLabel("What are you in the mood for?").first().fill("Something calm and atmospheric, but not horror");
   await page.getByRole("button", { name: "Build my watchlist" }).click();
 
   // A real list, with a real title and a list-level explanation (§13, §17).
@@ -74,7 +80,7 @@ test("exclusions in the request are honoured", async ({ page }) => {
   await signUpAndSkipOnboarding(page, makeTestUser("e2emoodx"));
 
   await page.goto("/mood");
-  await page.getByLabel("What are you in the mood for?").fill("Something dark and tense, but not horror");
+  await page.getByLabel("What are you in the mood for?").first().fill("Something dark and tense, but not horror");
   await page.getByRole("button", { name: "Build my watchlist" }).click();
 
   const list = page.getByRole("list", { name: "Your watchlist" });
@@ -88,7 +94,7 @@ test("a brand-new user is told personalization is still forming rather than bein
   await signUpAndSkipOnboarding(page, makeTestUser("e2emoodn"));
 
   await page.goto("/mood");
-  await page.getByLabel("What are you in the mood for?").fill("Something funny and easy to watch");
+  await page.getByLabel("What are you in the mood for?").first().fill("Something funny and easy to watch");
   await page.getByRole("button", { name: "Build my watchlist" }).click();
 
   await expect(page.getByRole("list", { name: "Your watchlist" })).toBeVisible({ timeout: 30_000 });
@@ -108,5 +114,5 @@ test("the Home and Discover entry points lead into the mood creator", async ({ p
   await expect(contextual).toBeVisible();
   await contextual.click();
   await page.waitForURL(/\/mood\?q=/);
-  await expect(page.getByLabel("What are you in the mood for?")).toHaveValue(/atmospheric/i);
+  await expect(page.getByLabel("What are you in the mood for?").first()).toHaveValue(/atmospheric/i);
 });

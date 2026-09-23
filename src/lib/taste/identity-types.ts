@@ -10,6 +10,21 @@ import type { IdentityArchetype } from "@/lib/taste/identity-model";
 
 export type SpectrumKey = "reach" | "breadth" | "tone" | "pace";
 
+/**
+ * A real piece of the user's own library that exemplifies one side of an axis.
+ *
+ * Chosen by the same predicates that compute the axis position — these are the
+ * items behind the number, not a separate recommendation.
+ */
+export interface SpectrumExemplar {
+  id: string;
+  title: string;
+  imageUrl: string;
+  href: string;
+  /** Which pole this item sits nearer, used to place it along the axis. */
+  side: "left" | "right";
+}
+
 export interface TasteSpectrum {
   key: SpectrumKey;
   /** Label for the low (0) end. */
@@ -22,6 +37,8 @@ export interface TasteSpectrum {
   sampleSize: number;
   /** The countable fact behind the position — never a vague assertion. */
   evidence: string;
+  /** Artwork from the user's library that shows what the position is made of. */
+  exemplars: SpectrumExemplar[];
 }
 
 export interface IdentityEvidence {

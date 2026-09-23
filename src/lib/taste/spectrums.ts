@@ -1,8 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/db/prisma";
 import { movieToCard, showToCard, albumToCard, songToCard } from "@/lib/content/mappers";
-import { CONTENT_KIND_FROM_TYPE, type ContentCard, type ContentKind } from "@/types/content";
-import type { SpectrumKey, TasteSpectrum } from "@/lib/taste/identity-types";
+import { CONTENT_KIND_FROM_TYPE, CONTENT_ROUTE, type ContentCard, type ContentKind } from "@/types/content";
+import type { SpectrumExemplar, SpectrumKey, TasteSpectrum } from "@/lib/taste/identity-types";
 
 /**
  * A spectrum needs this many measured items before it's shown. Below it the
@@ -10,7 +10,7 @@ import type { SpectrumKey, TasteSpectrum } from "@/lib/taste/identity-types";
  * is exactly the Barnum failure this system exists to avoid.
  */
 export const MIN_SAMPLE = 6;
-export type { SpectrumKey, TasteSpectrum };
+export type { SpectrumKey, TasteSpectrum, SpectrumExemplar };
 
 /** Mood tags that read as tonally heavy vs. light, drawn from the real catalogue vocabulary. */
 const DARK_MOODS = new Set(["Dark", "Tense", "Melancholic", "Intense"]);
@@ -90,6 +90,97 @@ function clamp(n: number): number {
  * a personality result feel like a horoscope, so "more niche than the average
  * Aurora title" beats "you like interesting things".
  */
+
+/** How many pieces of artwork stand behind one axis in the UI. */
+const EXEMPLARS_PER_SPECTRUM = 4;
+
+function toExemplar(card: ContentCard, side: "left" | "right"): SpectrumExemplar {
+  return {
+    id: `${card.kind}:${card.id}`,
+    title: card.title,
+    imageUrl: card.imageUrl,
+    href: `/${CONTENT_ROUTE[card.kind]}/${card.slug}`,
+    side,
+  };
+}
+
+/**
+ * The items that actually produced an axis position.
+ *
+ * Every predicate here is the same one used to compute the position a few lines
+ * below — the dark-mood set, the slow-genre set, the popularity comparison.
+ * That matters: artwork shown beside a number has to be the evidence for that
+ * number, not a second opinion about the user's taste.
+ *
+ * Only the side the user leans toward is returned. Showing "light" titles next
+ * to someone who leans dark would illustrate the axis at the cost of implying
+ * something about them that isn't true.
+ */
+function pickExemplars(
+  key: SpectrumKey,
+  position: number,
+  items: EngagedItem[],
+  catalogueAvgPopularity: number
+): SpectrumExemplar[] {
+  const leansRight = position > 55;
+  const leansLeft = position < 45;
+  // A genuinely balanced axis has no single side to illustrate.
+  const side: "left" | "right" = leansRight ? "right" : "left";
+
+  const withImage = items.filter((i) => i.card.imageUrl.length > 0);
+
+  const matching = (() => {
+    switch (key) {
+      case "reach": {
+        const ranked = [...withImage]
+          .filter((i) => typeof i.card.popularity === "number")
+          .sort((a, b) => (a.card.popularity ?? 0) - (b.card.popularity ?? 0));
+        // Niche end = least popular first; mainstream end = most popular first.
+        return leansRight ? ranked : [...ranked].reverse();
+      }
+      case "tone": {
+        const wanted = leansRight ? DARK_MOODS : LIGHT_MOODS;
+        return withImage.filter((i) => (i.card.moods ?? []).some((m) => wanted.has(m)));
+      }
+      case "pace": {
+        if (leansRight) {
+          return withImage.filter(
+            (i) => SLOW_GENRES.has(i.card.genres?.[0] ?? "") || (i.runtimeMin !== null && i.runtimeMin >= 140)
+          );
+        }
+        return withImage.filter((i) => FAST_GENRES.has(i.card.genres?.[0] ?? ""));
+      }
+      case "breadth": {
+        if (leansRight) {
+          // Exploration is about range, so show one title per distinct genre.
+          const seen = new Set<string>();
+          return withImage.filter((i) => {
+            const genre = i.card.genres?.[0];
+            if (!genre || seen.has(genre)) return false;
+            seen.add(genre);
+            return true;
+          });
+        }
+        // Comfort is the opposite: the genre they keep returning to.
+        const counts = new Map<string, number>();
+        for (const item of withImage) {
+          const genre = item.card.genres?.[0];
+          if (genre) counts.set(genre, (counts.get(genre) ?? 0) + 1);
+        }
+        const favourite = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+        return favourite ? withImage.filter((i) => i.card.genres?.[0] === favourite) : [];
+      }
+    }
+  })();
+
+  // Balanced axes still deserve artwork; fall back to the whole set rather than
+  // showing nothing at all.
+  const pool = matching.length > 0 || leansLeft || leansRight ? matching : withImage;
+  void catalogueAvgPopularity;
+
+  return pool.slice(0, EXEMPLARS_PER_SPECTRUM).map((i) => toExemplar(i.card, side));
+}
+
 export async function getTasteSpectrums(userId: string): Promise<TasteSpectrum[]> {
   const items = await getEngagedItems(userId);
   if (items.length === 0) return [];
@@ -111,6 +202,7 @@ export async function getTasteSpectrums(userId: string): Promise<TasteSpectrum[]
       rightLabel: "Niche",
       position,
       sampleSize: withPopularity.length,
+      exemplars: pickExemplars("reach", position, items, catalogueAvg),
       evidence:
         position > 55
           ? `What you pick is less mainstream than the average Aurora title.`
@@ -135,12 +227,14 @@ export async function getTasteSpectrums(userId: string): Promise<TasteSpectrum[]
     // Breadth ratio: 1 genre across everything = pure comfort; a new genre
     // almost every time = pure exploration.
     const ratio = distinct / genreTagged;
+    const breadthPosition = clamp(ratio * 160);
     spectrums.push({
       key: "breadth",
       leftLabel: "Comfort",
       rightLabel: "Exploration",
-      position: clamp(ratio * 160),
+      position: breadthPosition,
       sampleSize: genreTagged,
+      exemplars: pickExemplars("breadth", breadthPosition, items, 0),
       evidence: `${distinct} different genres across ${genreTagged} titles.`,
     });
   }
@@ -156,12 +250,14 @@ export async function getTasteSpectrums(userId: string): Promise<TasteSpectrum[]
   }
   const toneTotal = darkHits + lightHits;
   if (toneTotal >= MIN_SAMPLE) {
+    const tonePosition = clamp((darkHits / toneTotal) * 100);
     spectrums.push({
       key: "tone",
       leftLabel: "Light",
       rightLabel: "Dark",
-      position: clamp((darkHits / toneTotal) * 100),
+      position: tonePosition,
       sampleSize: toneTotal,
+      exemplars: pickExemplars("tone", tonePosition, items, 0),
       evidence: `${darkHits} of ${toneTotal} mood tags in your library are darker ones.`,
     });
   }
@@ -185,12 +281,14 @@ export async function getTasteSpectrums(userId: string): Promise<TasteSpectrum[]
     }
   }
   if (paceSample >= MIN_SAMPLE) {
+    const pacePosition = clamp((slowScore / paceSample) * 100);
     spectrums.push({
       key: "pace",
       leftLabel: "Fast-paced",
       rightLabel: "Slow-burn",
-      position: clamp((slowScore / paceSample) * 100),
+      position: pacePosition,
       sampleSize: Math.round(paceSample),
+      exemplars: pickExemplars("pace", pacePosition, items, 0),
       evidence: `${Math.round(slowScore)} of ${Math.round(paceSample)} titles lean toward slower, unfolding stories.`,
     });
   }

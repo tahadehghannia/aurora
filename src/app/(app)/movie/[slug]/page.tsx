@@ -7,11 +7,10 @@ import { getMovieBySlug } from "@/lib/content/queries";
 import { movieToCard } from "@/lib/content/mappers";
 import { getSimilarTo, getExploreBeyond } from "@/lib/recommendations";
 import { buildTasteSignal } from "@/lib/recommendations/signals";
-import { whyRecommendedWithAi } from "@/lib/recommendations/why-this";
 import { getUserContentState } from "@/lib/content/user-state";
 import { GenreBadges } from "@/components/detail/genre-badges";
 import { DetailActions } from "@/components/detail/detail-actions";
-import { WhyRecommended } from "@/components/detail/why-recommended";
+import { WhyRecommendedSection } from "@/components/detail/why-recommended-section";
 import { ContentRow } from "@/components/content/content-row";
 import { CrossMediaSection } from "@/components/content/cross-media-section";
 import { getCrossMediaConnections } from "@/lib/crossmedia/discovery";
@@ -43,7 +42,6 @@ export default async function MoviePage({ params }: MoviePageProps) {
   ]);
 
   const card = movieToCard(movie);
-  const whyThis = await whyRecommendedWithAi(card, signal, userId);
 
   return (
     <div className="flex flex-col gap-10 pb-16">
@@ -91,7 +89,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
         <div className="max-w-2xl space-y-2">
           <h2 className="text-h6 font-semibold">Overview</h2>
           <p className="text-body-md text-muted-foreground">{movie.overview}</p>
-          <WhyRecommended whyThis={whyThis} card={card} />
+          <WhyRecommendedSection card={card} signal={signal} userId={userId} />
         </div>
 
         {movie.cast.length > 0 && (

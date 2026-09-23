@@ -279,6 +279,58 @@
   }
 }
 
+/* --- Entertainment DNA portrait -------------------------------------------
+   Ambient motion for the DNA composition. Every keyframe animates transform or
+   opacity only, so nothing here triggers layout or paint on the main thread.
+
+   The amplitudes are deliberately small — a 3% zoom over 18 seconds reads as a
+   frame breathing, while anything larger reads as a screensaver. The global
+   prefers-reduced-motion rule below switches all of it off. */
+
+@keyframes dna-zoom {
+  from { transform: scale(1); }
+  to   { transform: scale(1.03); }
+}
+
+@keyframes dna-drift {
+  from { transform: scale(1.06) translate3d(-1.2%, 0, 0); }
+  to   { transform: scale(1.06) translate3d(1.2%, 0, 0); }
+}
+
+/* A slow pass of light across cover art, standing in for a reflection. */
+@keyframes dna-shimmer {
+  0%   { opacity: 0; transform: translate3d(-60%, 0, 0); }
+  45%  { opacity: 0.5; }
+  100% { opacity: 0; transform: translate3d(60%, 0, 0); }
+}
+
+/* Film grain: shifted in whole steps so it flickers like emulsion, not noise. */
+@keyframes dna-grain {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  20%  { transform: translate3d(-1%, 1%, 0); }
+  40%  { transform: translate3d(1%, -1%, 0); }
+  60%  { transform: translate3d(-1%, -1%, 0); }
+  80%  { transform: translate3d(1%, 1%, 0); }
+}
+
+@keyframes dna-breathe {
+  from { opacity: 0.55; }
+  to   { opacity: 0.8; }
+}
+
+.dna-motion-zoom  { animation: dna-zoom 18s ease-in-out infinite alternate; }
+.dna-motion-drift { animation: dna-drift 22s ease-in-out infinite alternate; }
+.dna-shimmer      { animation: dna-shimmer 14s ease-in-out infinite; }
+.dna-grain        { animation: dna-grain 8s steps(5, end) infinite; }
+.dna-breathe      { animation: dna-breathe 20s ease-in-out infinite alternate; }
+
+/* Each tile is its own compositing layer; without this the ambient loops force
+   repeated repaints of the whole stage. */
+.dna-tile {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

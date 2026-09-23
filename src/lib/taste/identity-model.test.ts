@@ -3,7 +3,7 @@ import { matchIdentity, matchConfidence, ARCHETYPES } from "@/lib/taste/identity
 import type { TasteSpectrum, SpectrumKey } from "@/lib/taste/identity-types";
 
 function spectrum(key: SpectrumKey, position: number): TasteSpectrum {
-  return { key, leftLabel: "L", rightLabel: "R", position, sampleSize: 20, evidence: "evidence" };
+  return { key, leftLabel: "L", rightLabel: "R", position, sampleSize: 20, evidence: "evidence", exemplars: [] };
 }
 
 describe("matchIdentity", () => {
